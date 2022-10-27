@@ -57,9 +57,31 @@ ABullettimeCharacter::ABullettimeCharacter()
 	Mesh1P->SetRelativeRotation(FRotator(1.9f, -19.19f, 5.2f));
 	Mesh1P->SetRelativeLocation(FVector(-0.5f, -4.4f, -155.7f));
 
+	WeaponMesh1P = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh1P"));
+	WeaponMesh1P->SetupAttachment(CameraComponent);
+	WeaponMesh1P->SetOnlyOwnerSee(true);
+
+	Weapon = CreateDefaultSubobject<UWeaponComponent>(TEXT("Weapon"));
+	//Weapon->SetupAttachment(WeaponMesh1P);
+
+	FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
+	WeaponMesh1P->AttachToComponent(Mesh1P, AttachmentRules, FName(TEXT("GripPoint")));
+
+	WeaponMesh3P = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("CharacterMesh3P"));
+	WeaponMesh3P->SetOwnerNoSee(true);
+	WeaponMesh3P->AttachToComponent(GetMesh(), AttachmentRules, FName(TEXT("GripPoint")));
+	
+
 	
 		// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 		// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
+}
+
+void ABullettimeCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+	Weapon->SetCharacter(this);
+	OnUseItem.AddDynamic(Weapon, &UWeaponComponent::Fire);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -116,6 +138,7 @@ void ABullettimeCharacter::LookUpAtRate(float Rate)
 
 void ABullettimeCharacter::OnPrimaryAction()
 {
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Debug %f"), 789.0f));
 	OnUseItem.Broadcast();
 }
 

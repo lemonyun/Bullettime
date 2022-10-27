@@ -3,17 +3,18 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/ActorComponent.h"
+#include "Components/SceneComponent.h"
 #include "WeaponComponent.generated.h"
 
 class ABullettimeCharacter;
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
-class BULLETTIME_API UWeaponComponent : public UActorComponent
+class BULLETTIME_API UWeaponComponent : public USceneComponent
 {
 	GENERATED_BODY()
 
 public:	
+
 	/** Projectile class to spawn */
 	UPROPERTY(EditDefaultsOnly, Category = Bullet)
 		TSubclassOf<class ABullet> BulletClass;
@@ -24,7 +25,11 @@ public:
 
 	/** AnimMontage to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
-		UAnimMontage* FireAnimation;
+		UAnimMontage* FireAnimation1P;
+
+	/** AnimMontage to play each time we fire */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
+		UAnimMontage* FireAnimation3P;
 
 	/** Gun muzzle's offset from the characters location */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
@@ -33,19 +38,19 @@ public:
 	/** Sets default values for this component's properties */
 	UWeaponComponent();
 
-	///** Attaches the actor to a FirstPersonCharacter */
-	//UFUNCTION(BlueprintCallable, Category = "Weapon")
-	//	void AttachWeapon(ABullettimeCharacter* TargetCharacter);
-
 	/** Make the weapon Fire a Projectile */
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 		void Fire();
+	// FScriptDelegate Delegate_Fire;
 
 protected:
 	/** Ends gameplay for this component. */
 	UFUNCTION()
 		virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
+
+public:
+	void SetCharacter(ABullettimeCharacter* character) {Character = character; }
 
 private:
 	/** The Character holding this weapon*/

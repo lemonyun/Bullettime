@@ -14,31 +14,15 @@ UWeaponComponent::UWeaponComponent()
 	MuzzleOffset = FVector(100.0f, 0.0f, 10.0f);
 }
 
-//void UWeaponComponent::AttachWeapon(ABullettimeCharacter* TargetCharacter)
-//{
-//	Character = TargetCharacter;
-//	if (Character != nullptr)
-//	{
-//		// Attach the weapon to the First Person Character
-//		FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
-//		GetOwner()->AttachToComponent(Character->GetMesh1P(), AttachmentRules, FName(TEXT("GripPoint")));
-//
-//		// Register so that Fire is called every time the character tries to use the item being held
-//		Character->OnUseItem.AddDynamic(this, &UWeaponComponent::Fire);
-//	}
-//}
-
 
 void UWeaponComponent::Fire()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Debug %f"), 123.0f));
 
 	if (Character == nullptr || Character->GetController() == nullptr)
 	{
 		return;
 	}
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Debug %f"), 456.0f));
-
+	
 	// Try and fire a projectile
 	if (BulletClass != nullptr)
 	{
@@ -48,7 +32,7 @@ void UWeaponComponent::Fire()
 			APlayerController* PlayerController = Cast<APlayerController>(Character->GetController());
 			const FRotator SpawnRotation = PlayerController->PlayerCameraManager->GetCameraRotation();
 			// MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
-			const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);
+			const FVector SpawnLocation = PlayerController->PlayerCameraManager->GetCameraLocation() + SpawnRotation.RotateVector(MuzzleOffset);
 
 			//Set Spawn Collision Handling Override
 			FActorSpawnParameters ActorSpawnParams;
@@ -66,15 +50,27 @@ void UWeaponComponent::Fire()
 	}
 
 	// Try and play a firing animation if specified
-	if (FireAnimation != nullptr)
+	if (FireAnimation1P != nullptr)
 	{
-		// Get the animation object for the arms mesh
-		UAnimInstance* AnimInstance = Character->GetMesh1P()->GetAnimInstance();
-		if (AnimInstance != nullptr)
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Debug %f"), 456.0f));
+		UAnimInstance* AnimInstance1P = Character->GetMesh1P()->GetAnimInstance();
+		if (AnimInstance1P != nullptr)
 		{
-			AnimInstance->Montage_Play(FireAnimation, 1.f);
+			AnimInstance1P->Montage_Play(FireAnimation1P, 1.f);
+
 		}
 	}
+	if (FireAnimation3P != nullptr)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Debug %f"), 123.0f));
+		UAnimInstance* AnimInstance3P = Character->GetMesh()->GetAnimInstance();
+		if (AnimInstance3P != nullptr)
+		{
+			AnimInstance3P->Montage_Play(FireAnimation3P, 1.f);
+
+		}
+	}
+
 }
 
 void UWeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
