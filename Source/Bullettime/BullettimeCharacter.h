@@ -6,19 +6,29 @@
 #include "GameFramework/Character.h"
 #include "BullettimeCharacter.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnUseItem);
+
 UCLASS(config=Game)
 class ABullettimeCharacter : public ACharacter
 {
 	GENERATED_BODY()
 
 	/** Camera boom positioning the camera behind the character */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	class USpringArmComponent* CameraBoom;
+	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	//class USpringArmComponent* CameraBoom;
 
 	/** Follow camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	class UCameraComponent* FollowCamera;
+	class UCameraComponent* CameraComponent;
+
+	/** Pawn mesh: 1st person view (arms; seen only by self) */
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh, meta = (AllowPrivateAccess = "true"))
+	USkeletalMeshComponent* Mesh1P;
+
 public:
+	UPROPERTY(BlueprintAssignable, Category = "Interaction")
+	FOnUseItem OnUseItem;
+
 	ABullettimeCharacter();
 
 	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
@@ -26,6 +36,9 @@ public:
 	float TurnRateGamepad;
 
 protected:
+
+	/** Fires a projectile. */
+	void OnPrimaryAction();
 
 	/** Called for forwards/backward input */
 	void MoveForward(float Value);
@@ -58,8 +71,10 @@ protected:
 
 public:
 	/** Returns CameraBoom subobject **/
-	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
+	// FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	/** Returns FollowCamera subobject **/
-	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+	FORCEINLINE class UCameraComponent* GetCamera() const { return CameraComponent; }
+
+	USkeletalMeshComponent* GetMesh1P() const { return Mesh1P; }
 };
 
