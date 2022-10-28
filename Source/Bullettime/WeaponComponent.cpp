@@ -62,12 +62,15 @@ void UWeaponComponent::Fire()
 	}
 	if (FireAnimation3P != nullptr)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Debug %f"), 123.0f));
+		
 		UAnimInstance* AnimInstance3P = Character->GetMesh()->GetAnimInstance();
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, AnimInstance3P->GetName());
+
 		if (AnimInstance3P != nullptr)
 		{
-			AnimInstance3P->Montage_Play(FireAnimation3P, 1.f);
-
+			
+			float check = AnimInstance3P->Montage_Play(FireAnimation3P, 1.f);
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, FString::Printf(TEXT("%f"), check));
 		}
 	}
 
