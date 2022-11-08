@@ -4,22 +4,22 @@
 #include "Bullet.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
-
+#include "BullettimeCharacter.h"
 // Sets default values
 ABullet::ABullet()
 {
 	// Use a sphere as a simple collision representation
 	CollisionComp = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComp"));
 	CollisionComp->InitSphereRadius(5.0f);
-	CollisionComp->BodyInstance.SetCollisionProfileName("Projectile");
-	CollisionComp->OnComponentHit.AddDynamic(this, &ABullet::OnHit);		// set up a notification for when this component hits something blocking
+	CollisionComp->BodyInstance.SetCollisionProfileName("Bullet");
+	CollisionComp->OnComponentBeginOverlap.AddDynamic(this, &ABullet::OnBulletOverlap);		// set up a notification for when this component hits something blocking
 
 	// Players can't walk on it
 	CollisionComp->SetWalkableSlopeOverride(FWalkableSlopeOverride(WalkableSlope_Unwalkable, 0.f));
 	CollisionComp->CanCharacterStepUpOn = ECB_No;
 
 	// Set as root component
-	RootComponent = CollisionComp;
+	RootComponent = CollisionComp;	
 
 	// Use a ProjectileMovementComponent to govern this projectile's movement
 	ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileComp"));
@@ -33,13 +33,24 @@ ABullet::ABullet()
 	InitialLifeSpan = 3.0f;
 }
 
-void ABullet::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+void ABullet::OnBulletOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	// Only add impulse and destroy projectile if we hit a physics
-	if ((OtherActor != nullptr) && (OtherActor != this) && (OtherComp != nullptr) && OtherComp->IsSimulatingPhysics())
+	
+	// 충돌 액터를 캐스팅했을 때 정상적으로 캐스팅이 된다면 다른 플레이어와 충돌헀을 경우를 뜻한다.
+	ABullettimeCharacter* enemy = Cast<ABullettimeCharacter>(OtherActor);
+	if (Owner == OtherActor)
 	{
-		OtherComp->AddImpulseAtLocation(GetVelocity() * 100.0f, GetActorLocation());
-
-		Destroy();
+		// 충돌한 액터가 자기 자신이라면 처리하지 않음
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString("It's me"));
+		return;
 	}
+	
+	// 충돌한 액터가 다른 플레이어인 경우 데미지를 가함
+	if (enemy != nullptr)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("OnDamage"));
+		enemy->OnDamage();
+	}
+	
+	Destroy();
 }

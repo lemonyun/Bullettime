@@ -17,6 +17,11 @@ ABullettimeCharacter::ABullettimeCharacter()
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 
+	GetCapsuleComponent()->SetCollisionObjectType(ECC_GameTraceChannel2);
+	// GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Ignore);
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Overlap);
+
+
 	// set our turn rate for input
 	TurnRateGamepad = 50.f;
 
@@ -71,7 +76,8 @@ ABullettimeCharacter::ABullettimeCharacter()
 	WeaponMesh3P->SetOwnerNoSee(true);
 	WeaponMesh3P->AttachToComponent(GetMesh(), AttachmentRules, FName(TEXT("GripPoint")));
 	
-
+	//maxHealth = 100;
+	//curHealth = maxHealth;
 	
 		// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 		// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
@@ -82,6 +88,8 @@ void ABullettimeCharacter::BeginPlay()
 	Super::BeginPlay();
 	Weapon->SetCharacter(this);
 	OnUseItem.AddDynamic(Weapon, &UWeaponComponent::Fire);
+
+	curHealth = maxHealth;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -122,6 +130,17 @@ void ABullettimeCharacter::TouchStarted(ETouchIndex::Type FingerIndex, FVector L
 void ABullettimeCharacter::TouchStopped(ETouchIndex::Type FingerIndex, FVector Location)
 {
 	StopJumping();
+}
+
+void ABullettimeCharacter::OnDamage()
+{
+	curHealth -= 10;
+
+	if (curHealth <= 0)
+	{
+		Destroy();
+	}
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("CurHealth : %f"), curHealth));
 }
 
 void ABullettimeCharacter::TurnAtRate(float Rate)

@@ -47,6 +47,12 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Input)
 	float TurnRateGamepad;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Health)
+	float maxHealth = 100.0f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Health)
+	float curHealth;
+
 protected:
 
 	/** Fires a projectile. */
@@ -75,6 +81,9 @@ protected:
 
 	/** Handler for when a touch input stops. */
 	void TouchStopped(ETouchIndex::Type FingerIndex, FVector Location);
+
+public:
+	void OnDamage();
 
 protected:
 	// APawn interface

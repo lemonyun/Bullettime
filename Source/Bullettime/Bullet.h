@@ -8,6 +8,7 @@
 
 class USphereComponent;
 class UProjectileMovementComponent;
+class ABullettimeCharacter;
 
 UCLASS()
 class BULLETTIME_API ABullet : public AActor
@@ -22,6 +23,9 @@ class BULLETTIME_API ABullet : public AActor
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
 	UProjectileMovementComponent* ProjectileMovement;
 
+public:
+	UPROPERTY(VisibleAnywhere)
+	ABullettimeCharacter* bulletOwner;
 
 public:	
 	// Sets default values for this actor's properties
@@ -29,7 +33,7 @@ public:
 
 	/** called when projectile hits something */
 	UFUNCTION()
-	void OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
+	void OnBulletOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 	/** Returns CollisionComp subobject **/
 	USphereComponent* GetCollisionComp() const { return CollisionComp; }

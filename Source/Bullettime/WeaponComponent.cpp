@@ -37,9 +37,11 @@ void UWeaponComponent::Fire()
 			//Set Spawn Collision Handling Override
 			FActorSpawnParameters ActorSpawnParams;
 			ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
+			ActorSpawnParams.Owner = Cast<AActor>(Character);
 
 			// Spawn the projectile at the muzzle
-			World->SpawnActor<ABullet>(BulletClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
+			ABullet *bullet = World->SpawnActor<ABullet>(BulletClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
+			
 		}
 	}
 
@@ -52,7 +54,6 @@ void UWeaponComponent::Fire()
 	// Try and play a firing animation if specified
 	if (FireAnimation1P != nullptr)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Debug %f"), 456.0f));
 		UAnimInstance* AnimInstance1P = Character->GetMesh1P()->GetAnimInstance();
 		if (AnimInstance1P != nullptr)
 		{
@@ -64,13 +65,11 @@ void UWeaponComponent::Fire()
 	{
 		
 		UAnimInstance* AnimInstance3P = Character->GetMesh()->GetAnimInstance();
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, AnimInstance3P->GetName());
 
 		if (AnimInstance3P != nullptr)
 		{
 			
 			float check = AnimInstance3P->Montage_Play(FireAnimation3P, 1.f);
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, FString::Printf(TEXT("%f"), check));
 		}
 	}
 
