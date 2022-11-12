@@ -40,6 +40,10 @@ public:
 
 	ABullettimeCharacter();
 
+	/* 프로퍼티 리플리케이션 */
+	// 리플리케이트가 필요한 프로퍼티를 추가할 때는 반드시 이 함수도 추가해야 한다.
+	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 protected:
 	virtual void BeginPlay();
 
@@ -48,10 +52,13 @@ protected:
 	float TurnRateGamepad;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Health)
-	float maxHealth = 100.0f;
+	float MaxHealth = 100.0f;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Health)
-	float curHealth;
+	UPROPERTY(ReplicatedUsing=OnRep_CurrentHealth)
+	float CurHealth;
+
+	UFUNCTION()
+	void OnRep_CurrentHealth();
 
 protected:
 
@@ -82,8 +89,16 @@ protected:
 	/** Handler for when a touch input stops. */
 	void TouchStopped(ETouchIndex::Type FingerIndex, FVector Location);
 
+	void OnHealthUpdate();
+
 public:
-	void OnDamage();
+	/** Event for taking damage. Overridden from APawn.*/
+	UFUNCTION(BlueprintCallable, Category = "Health")
+	float TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+
+	/** Setter for Current Health. Clamps the value between 0 and MaxHealth and calls OnHealthUpdate. Should only be called on the server.*/
+	UFUNCTION(BlueprintCallable, Category = "Health")
+	void SetCurrentHealth(float healthValue);
 
 protected:
 	// APawn interface

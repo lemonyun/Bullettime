@@ -7,6 +7,9 @@
 #include "Components/InputComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
+#include "Net/UnrealNetwork.h"
+#include "Engine/Engine.h"
+
 
 //////////////////////////////////////////////////////////////////////////
 // ABullettimeCharacter
@@ -17,10 +20,11 @@ ABullettimeCharacter::ABullettimeCharacter()
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 
+	//GetCapsuleComponent()->SetCollisionProfileName(TEXT("BlockAllDynamic"));
 	GetCapsuleComponent()->SetCollisionObjectType(ECC_GameTraceChannel2);
 	// GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Ignore);
-	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Overlap);
-
+	//GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Overlap);
+	
 
 	// set our turn rate for input
 	TurnRateGamepad = 50.f;
@@ -83,13 +87,15 @@ ABullettimeCharacter::ABullettimeCharacter()
 		// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 }
 
+
+
 void ABullettimeCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	Weapon->SetCharacter(this);
 	OnUseItem.AddDynamic(Weapon, &UWeaponComponent::Fire);
 
-	curHealth = maxHealth;
+	CurHealth = MaxHealth;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -132,17 +138,6 @@ void ABullettimeCharacter::TouchStopped(ETouchIndex::Type FingerIndex, FVector L
 	StopJumping();
 }
 
-void ABullettimeCharacter::OnDamage()
-{
-	curHealth -= 10;
-
-	if (curHealth <= 0)
-	{
-		Destroy();
-	}
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("CurHealth : %f"), curHealth));
-}
-
 void ABullettimeCharacter::TurnAtRate(float Rate)
 {
 	// calculate delta for this frame from the rate information
@@ -157,7 +152,6 @@ void ABullettimeCharacter::LookUpAtRate(float Rate)
 
 void ABullettimeCharacter::OnPrimaryAction()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Debug %f"), 789.0f));
 	OnUseItem.Broadcast();
 }
 
@@ -188,4 +182,60 @@ void ABullettimeCharacter::MoveRight(float Value)
 		// add movement in that direction
 		AddMovementInput(Direction, Value);
 	}
+}
+
+float ABullettimeCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	float damageApplied = CurHealth - DamageTaken;
+	SetCurrentHealth(damageApplied);
+	return damageApplied;
+}
+
+void ABullettimeCharacter::OnRep_CurrentHealth()
+{
+	OnHealthUpdate();
+}
+
+void ABullettimeCharacter::OnHealthUpdate() {
+	//Client-specific functionality
+	if (IsLocallyControlled())
+	{
+		FString healthMessage = FString::Printf(TEXT("You now have %f health remaining."), CurHealth);
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
+
+		if (CurHealth <= 0)
+		{
+			FString deathMessage = FString::Printf(TEXT("You have been killed."));
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, deathMessage);
+		}
+	}
+
+	//Server-specific functionality
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		FString healthMessage = FString::Printf(TEXT("%s now has %f health remaining."), *GetFName().ToString(), CurHealth);
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
+	}
+
+	//Functions that occur on all machines. 
+	/*
+		Any special functionality that should occur as a result of damage or death should be placed here.
+	*/
+}
+
+void ABullettimeCharacter::SetCurrentHealth(float healthValue)
+{
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		CurHealth = FMath::Clamp(healthValue, 0.f, MaxHealth);
+		OnHealthUpdate();
+	}
+}
+
+void ABullettimeCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	//현재 체력 리플리케이트
+	DOREPLIFETIME(ABullettimeCharacter, CurHealth);
 }

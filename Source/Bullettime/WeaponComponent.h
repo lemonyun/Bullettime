@@ -39,8 +39,8 @@ public:
 	UWeaponComponent();
 
 	/** Make the weapon Fire a Projectile */
-	UFUNCTION(BlueprintCallable, Category = "Weapon")
-		void Fire();
+	UFUNCTION(Server, Reliable)
+	void Fire();
 	// FScriptDelegate Delegate_Fire;
 
 protected:

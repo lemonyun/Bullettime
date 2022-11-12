@@ -5,6 +5,13 @@
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "BullettimeCharacter.h"
+#include "GameFramework/DamageType.h"
+#include "Particles/ParticleSystem.h"
+#include "Kismet/GameplayStatics.h"
+#include "UObject/ConstructorHelpers.h"
+
+
+
 // Sets default values
 ABullet::ABullet()
 {
@@ -12,14 +19,21 @@ ABullet::ABullet()
 	CollisionComp = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComp"));
 	CollisionComp->InitSphereRadius(5.0f);
 	CollisionComp->BodyInstance.SetCollisionProfileName("Bullet");
-	CollisionComp->OnComponentBeginOverlap.AddDynamic(this, &ABullet::OnBulletOverlap);		// set up a notification for when this component hits something blocking
-
+	CollisionComp->SetCollisionProfileName(TEXT("BlockAllDynamic"));
+	
 	// Players can't walk on it
 	CollisionComp->SetWalkableSlopeOverride(FWalkableSlopeOverride(WalkableSlope_Unwalkable, 0.f));
 	CollisionComp->CanCharacterStepUpOn = ECB_No;
 
 	// Set as root component
-	RootComponent = CollisionComp;	
+	RootComponent = CollisionComp;
+
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		CollisionComp->OnComponentHit.AddDynamic(this, &ABullet::OnBulletImpact);
+	}
+	
+	bReplicates = true;
 
 	// Use a ProjectileMovementComponent to govern this projectile's movement
 	ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileComp"));
@@ -31,9 +45,18 @@ ABullet::ABullet()
 
 	// Die after 3 seconds by default
 	InitialLifeSpan = 3.0f;
+
+	static ConstructorHelpers::FObjectFinder<UParticleSystem> DefaultExplosionEffect(TEXT("/Game/StarterContent/Particles/P_Explosion.P_Explosion"));
+	if (DefaultExplosionEffect.Succeeded())
+	{
+		ExplosionEffect = DefaultExplosionEffect.Object;
+	}
+
+	DamageType = UDamageType::StaticClass();
+	Damage = 10.0f;
 }
 
-void ABullet::OnBulletOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+void ABullet::OnBulletImpact(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
 	
 	// 충돌 액터를 캐스팅했을 때 정상적으로 캐스팅이 된다면 다른 플레이어와 충돌헀을 경우를 뜻한다.
@@ -48,9 +71,15 @@ void ABullet::OnBulletOverlap(UPrimitiveComponent* OverlappedComponent, AActor* 
 	// 충돌한 액터가 다른 플레이어인 경우 데미지를 가함
 	if (enemy != nullptr)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("OnDamage"));
-		enemy->OnDamage();
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("OnDamage"));
+		UGameplayStatics::ApplyPointDamage(OtherActor, Damage, NormalImpulse, Hit, Owner->GetInstigatorController(), this, DamageType);
 	}
 	
 	Destroy();
+}
+
+void ABullet::Destroyed()
+{
+	FVector spawnLocation = GetActorLocation();
+	UGameplayStatics::SpawnEmitterAtLocation(this, ExplosionEffect, spawnLocation, FRotator::ZeroRotator, true, EPSCPoolMethod::AutoRelease);
 }

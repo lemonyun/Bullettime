@@ -15,7 +15,7 @@ UWeaponComponent::UWeaponComponent()
 }
 
 
-void UWeaponComponent::Fire()
+void UWeaponComponent::Fire_Implementation()
 {
 
 	if (Character == nullptr || Character->GetController() == nullptr)
@@ -38,6 +38,7 @@ void UWeaponComponent::Fire()
 			FActorSpawnParameters ActorSpawnParams;
 			ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
 			ActorSpawnParams.Owner = Cast<AActor>(Character);
+			ActorSpawnParams.Instigator = Cast<APawn>(Character);
 
 			// Spawn the projectile at the muzzle
 			ABullet *bullet = World->SpawnActor<ABullet>(BulletClass, SpawnLocation, SpawnRotation, ActorSpawnParams);

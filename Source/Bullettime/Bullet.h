@@ -23,9 +23,25 @@ class BULLETTIME_API ABullet : public AActor
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
 	UProjectileMovementComponent* ProjectileMovement;
 
+
+protected:
+	virtual void Destroyed() override;
+
 public:
 	UPROPERTY(VisibleAnywhere)
 	ABullettimeCharacter* bulletOwner;
+
+	// Particle used when the projectile impacts against another object and explodes.
+	UPROPERTY(EditAnywhere, Category = "Effects")
+	class UParticleSystem* ExplosionEffect;
+
+	//The damage type and damage that will be done by this projectile
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damage")
+	TSubclassOf<class UDamageType> DamageType;
+
+	//The damage dealt by this projectile.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damage")
+	float Damage;
 
 public:	
 	// Sets default values for this actor's properties
@@ -33,7 +49,7 @@ public:
 
 	/** called when projectile hits something */
 	UFUNCTION()
-	void OnBulletOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	void OnBulletImpact(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 
 	/** Returns CollisionComp subobject **/
 	USphereComponent* GetCollisionComp() const { return CollisionComp; }
