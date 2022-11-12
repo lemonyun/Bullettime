@@ -93,7 +93,8 @@ void ABullettimeCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	Weapon->SetCharacter(this);
-	OnUseItem.AddDynamic(Weapon, &UWeaponComponent::Fire);
+	OnUseItem.AddDynamic(Weapon, &UWeaponComponent::Server_OnFire);
+	OnUseItem.AddDynamic(Weapon, &UWeaponComponent::Play1PFireMontage);
 
 	CurHealth = MaxHealth;
 }

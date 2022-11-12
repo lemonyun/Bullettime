@@ -15,7 +15,7 @@ UWeaponComponent::UWeaponComponent()
 }
 
 
-void UWeaponComponent::Fire_Implementation()
+void UWeaponComponent::Server_OnFire_Implementation()
 {
 
 	if (Character == nullptr || Character->GetController() == nullptr)
@@ -46,30 +46,29 @@ void UWeaponComponent::Fire_Implementation()
 		}
 	}
 
+
+	// 서버에서 클라이언트로 리플리케이션 해줘야 할 작업들
+	Multi_OnFire();
+
+}
+
+void UWeaponComponent::Multi_OnFire_Implementation()
+{
 	// Try and play the sound if specified
 	if (FireSound != nullptr)
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, FireSound, Character->GetActorLocation());
 	}
 
-	// Try and play a firing animation if specified
-	if (FireAnimation1P != nullptr)
-	{
-		UAnimInstance* AnimInstance1P = Character->GetMesh1P()->GetAnimInstance();
-		if (AnimInstance1P != nullptr)
-		{
-			AnimInstance1P->Montage_Play(FireAnimation1P, 1.f);
 
-		}
-	}
 	if (FireAnimation3P != nullptr)
 	{
-		
+
 		UAnimInstance* AnimInstance3P = Character->GetMesh()->GetAnimInstance();
 
 		if (AnimInstance3P != nullptr)
 		{
-			
+
 			float check = AnimInstance3P->Montage_Play(FireAnimation3P, 1.f);
 		}
 	}
@@ -81,6 +80,20 @@ void UWeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	if (Character != nullptr)
 	{
 		// Unregister from the OnUseItem Event
-		Character->OnUseItem.RemoveDynamic(this, &UWeaponComponent::Fire);
+		Character->OnUseItem.RemoveDynamic(this, &UWeaponComponent::Server_OnFire);
+	}
+}
+
+void UWeaponComponent::Play1PFireMontage()
+{
+	// Try and play a firing animation if specified
+	if (FireAnimation1P != nullptr)
+	{
+		UAnimInstance* AnimInstance1P = Character->GetMesh1P()->GetAnimInstance();
+		if (AnimInstance1P != nullptr)
+		{
+			AnimInstance1P->Montage_Play(FireAnimation1P, 1.f);
+			
+		}
 	}
 }

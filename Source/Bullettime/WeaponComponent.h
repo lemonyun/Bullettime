@@ -40,17 +40,21 @@ public:
 
 	/** Make the weapon Fire a Projectile */
 	UFUNCTION(Server, Reliable)
-	void Fire();
-	// FScriptDelegate Delegate_Fire;
+	void Server_OnFire();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multi_OnFire();
 
 protected:
 	/** Ends gameplay for this component. */
 	UFUNCTION()
 		virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-
 public:
 	void SetCharacter(ABullettimeCharacter* character) {Character = character; }
+
+	UFUNCTION()
+	void Play1PFireMontage();
 
 private:
 	/** The Character holding this weapon*/
