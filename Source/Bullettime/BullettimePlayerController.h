@@ -13,14 +13,5 @@ UCLASS()
 class BULLETTIME_API ABullettimePlayerController : public APlayerController
 {
 	GENERATED_BODY()
-
-public:
-	ABullettimePlayerController();
-
-	//UPROPERTY(EditDefaultsOnly, Category = HUD)
-
-
-protected:
-	virtual void BeginPlay() override;
-
+	
 };

@@ -47,6 +47,8 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
 	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Input)
 	float TurnRateGamepad;
@@ -112,5 +114,12 @@ public:
 	FORCEINLINE class UCameraComponent* GetCamera() const { return CameraComponent; }
 
 	USkeletalMeshComponent* GetMesh1P() const { return Mesh1P; }
+
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<class UBullettimePlayerHUD> PlayerHUDClass;
+
+	UPROPERTY()
+	class UBullettimePlayerHUD* PlayerHUD;
 };
 

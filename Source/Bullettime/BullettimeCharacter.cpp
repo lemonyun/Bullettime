@@ -9,7 +9,9 @@
 #include "GameFramework/Controller.h"
 #include "Net/UnrealNetwork.h"
 #include "Engine/Engine.h"
-
+#include "BullettimePlayerHUD.h"
+#include "Blueprint/UserWidget.h"
+#include "BullettimePlayerController.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ABullettimeCharacter
@@ -80,9 +82,12 @@ ABullettimeCharacter::ABullettimeCharacter()
 	WeaponMesh3P->SetOwnerNoSee(true);
 	WeaponMesh3P->AttachToComponent(GetMesh(), AttachmentRules, FName(TEXT("GripPoint")));
 	
-	//maxHealth = 100;
-	//curHealth = maxHealth;
+	MaxHealth = 100;
+	CurHealth = MaxHealth;
 	
+	PlayerHUDClass = nullptr;
+	PlayerHUD = nullptr;
+
 		// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 		// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 }
@@ -97,6 +102,27 @@ void ABullettimeCharacter::BeginPlay()
 	OnUseItem.AddDynamic(Weapon, &UWeaponComponent::Play1PFireMontage);
 
 	CurHealth = MaxHealth;
+
+	// 클라이언트가 소유한 캐릭터이며 블루프린트 세팅이 되어있는 경우에 
+	if (IsLocallyControlled() && PlayerHUDClass)
+	{
+		ABullettimePlayerController* BPC = GetController<ABullettimePlayerController>();
+		PlayerHUD = CreateWidget<UBullettimePlayerHUD>(BPC, PlayerHUDClass);
+		PlayerHUD->AddToPlayerScreen();
+		PlayerHUD->SetHealth(CurHealth, MaxHealth);
+	}
+}
+
+void ABullettimeCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+
+	if (PlayerHUD)
+	{
+		PlayerHUD->RemoveFromParent();
+		PlayerHUD = nullptr;
+	}
+
+	Super::EndPlay(EndPlayReason); 
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -209,6 +235,11 @@ void ABullettimeCharacter::OnHealthUpdate() {
 			FString deathMessage = FString::Printf(TEXT("You have been killed."));
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, deathMessage);
 		}
+
+		if (PlayerHUD)
+		{
+			PlayerHUD->SetHealth(CurHealth, MaxHealth);
+		}
 	}
 
 	//Server-specific functionality
@@ -216,7 +247,14 @@ void ABullettimeCharacter::OnHealthUpdate() {
 	{
 		FString healthMessage = FString::Printf(TEXT("%s now has %f health remaining."), *GetFName().ToString(), CurHealth);
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
+
+		if (CurHealth <= 0.f)
+		{
+			// 플레이어 죽음 처리
+		}
 	}
+
+
 
 	//Functions that occur on all machines. 
 	/*
