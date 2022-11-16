@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Components/TimelineComponent.h"
 #include "BullettimeCharacter.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnUseItem);
@@ -62,6 +63,16 @@ protected:
 	UFUNCTION()
 	void OnRep_CurrentHealth();
 
+	void DoRagdoll();
+
+	void AddScore();
+
+	void SetRespawnTimer();
+
+	void CameraWork();
+
+	void ChangeThirdPerson();
+
 protected:
 
 	/** Fires a projectile. */
@@ -93,6 +104,38 @@ protected:
 
 	void OnHealthUpdate();
 
+	UFUNCTION(NetMulticast, Reliable)
+	void Multi_OnPlayerDie();
+
+	UFUNCTION(Client, Reliable)
+	void Client_RespawnCharacter();
+
+	UPROPERTY()
+	FTransform SpawnTransform;
+
+	FTimerHandle RespawnTimerHandle;
+
+	UPROPERTY(EditAnywhere)
+    UCurveVector* CameraTimelineRotationCurve;
+
+	UPROPERTY(EditAnywhere)
+	UCurveVector* CameraTimelineTransformCurve;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	UTimelineComponent* TransformTimelineComp;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	UTimelineComponent* RotationTimelineComp;
+
+	FOnTimelineVector UpdateFunctionRotation;
+	FOnTimelineVector UpdateFunctionTransform;
+
+	UFUNCTION()
+	void UpdateRotationTimelineComp(FVector Output);
+	
+	UFUNCTION()
+	void UpdateTransformTimelineComp(FVector Output);
+
 public:
 	/** Event for taking damage. Overridden from APawn.*/
 	UFUNCTION(BlueprintCallable, Category = "Health")
@@ -102,24 +145,29 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Health")
 	void SetCurrentHealth(float healthValue);
 
+	UFUNCTION(BlueprintCallable, Category = "Health")
+	float GetCurrentHealth() { return CurHealth; }
+
+	UFUNCTION(BlueprintCallable, Category = "Health")
+	float GetMaxHealth() { return MaxHealth; }
+
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	// End of APawn interface
 
 public:
-	/** Returns CameraBoom subobject **/
-	// FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
-	/** Returns FollowCamera subobject **/
+
 	FORCEINLINE class UCameraComponent* GetCamera() const { return CameraComponent; }
 
 	USkeletalMeshComponent* GetMesh1P() const { return Mesh1P; }
 
 
-	UPROPERTY(EditAnywhere)
-	TSubclassOf<class UBullettimePlayerHUD> PlayerHUDClass;
-
 	UPROPERTY()
 	class UBullettimePlayerHUD* PlayerHUD;
+
+	UPROPERTY()
+	AController* RecentDamageCauser;
+
 };
 

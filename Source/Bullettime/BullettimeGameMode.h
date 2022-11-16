@@ -6,6 +6,7 @@
 #include "GameFramework/GameModeBase.h"
 #include "BullettimeGameMode.generated.h"
 
+
 UCLASS(minimalapi)
 class ABullettimeGameMode : public AGameModeBase
 {
@@ -13,6 +14,14 @@ class ABullettimeGameMode : public AGameModeBase
 
 public:
 	ABullettimeGameMode();
+	
+	UFUNCTION(Server, Reliable)
+	void Server_RespawnRequested(class ABullettimePlayerController* PlayerController, FTransform SpawnTransform);
+	
+	UPROPERTY(EditDefaultsOnly, Category = Character)
+	TSubclassOf<class ABullettimeCharacter> BullettimeCharacterClass;
+
+	
 };
 
 

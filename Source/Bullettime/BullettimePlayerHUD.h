@@ -15,5 +15,17 @@ public:
 	UPROPERTY(EditAnywhere, meta = (BindWidget))
 	class UProgressBar* HealthBar;
 
+	/*UPROPERTY()
+	class ABullettimeCharacter* Character;
+
+	UPROPERTY()
+	class ABullettimePlayerController* PlayerController;*/
+
+	//virtual void NativeConstruct() override;
+
+	//void Update();
+
+	//UPROPERTY()
+	//float MaxHealth = 100.0f;
 
 };

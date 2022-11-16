@@ -12,12 +12,16 @@
 #include "BullettimePlayerHUD.h"
 #include "Blueprint/UserWidget.h"
 #include "BullettimePlayerController.h"
+#include "BullettimePlayerState.h"
+
 
 //////////////////////////////////////////////////////////////////////////
 // ABullettimeCharacter
 
 ABullettimeCharacter::ABullettimeCharacter()
 {
+
+	GetMesh()->SetOwnerNoSee(true);
 
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
@@ -33,7 +37,7 @@ ABullettimeCharacter::ABullettimeCharacter()
 
 	// Don't rotate when the controller rotates. Let that just affect the camera.
 	bUseControllerRotationPitch = false;
-	bUseControllerRotationYaw = false;
+	bUseControllerRotationYaw = true;
 	bUseControllerRotationRoll = false;
 
 	// Configure character movement
@@ -58,6 +62,8 @@ ABullettimeCharacter::ABullettimeCharacter()
 	CameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
 	CameraComponent->SetupAttachment(GetCapsuleComponent()); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	CameraComponent->bUsePawnControlRotation = true;
+	// CameraComponent->SetRelativeTransform(FTransform(FVector(0.0f, -45.0f, 0.0f)));
+
 
 	// Create a mesh component that will be used when being viewed from a '1st person' view (when controlling this pawn)
 	Mesh1P = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("CharacterMesh1P"));
@@ -84,10 +90,10 @@ ABullettimeCharacter::ABullettimeCharacter()
 	
 	MaxHealth = 100;
 	CurHealth = MaxHealth;
-	
-	PlayerHUDClass = nullptr;
-	PlayerHUD = nullptr;
 
+	TransformTimelineComp = CreateDefaultSubobject<UTimelineComponent>(TEXT("TransformTimelineComp"));
+	RotationTimelineComp = CreateDefaultSubobject<UTimelineComponent>(TEXT("RotationTimelineComp"));
+	
 		// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 		// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 }
@@ -102,25 +108,42 @@ void ABullettimeCharacter::BeginPlay()
 	OnUseItem.AddDynamic(Weapon, &UWeaponComponent::Play1PFireMontage);
 
 	CurHealth = MaxHealth;
+	
 
-	// 클라이언트가 소유한 캐릭터이며 블루프린트 세팅이 되어있는 경우에 
-	if (IsLocallyControlled() && PlayerHUDClass)
+
+	UpdateFunctionRotation.BindDynamic(this, &ABullettimeCharacter::UpdateRotationTimelineComp);
+	UpdateFunctionTransform.BindDynamic(this, &ABullettimeCharacter::UpdateTransformTimelineComp);
+
+
+	if (CameraTimelineTransformCurve)
 	{
-		ABullettimePlayerController* BPC = GetController<ABullettimePlayerController>();
-		PlayerHUD = CreateWidget<UBullettimePlayerHUD>(BPC, PlayerHUDClass);
-		PlayerHUD->AddToPlayerScreen();
-		PlayerHUD->SetHealth(CurHealth, MaxHealth);
+		TransformTimelineComp->AddInterpVector(CameraTimelineTransformCurve, UpdateFunctionTransform);
 	}
+
+	if (CameraTimelineRotationCurve)
+	{
+		RotationTimelineComp->AddInterpVector(CameraTimelineRotationCurve, UpdateFunctionRotation);
+	}
+
+	
+
+
+	// 클라이언트 혹은 리슨서버가 소유한 캐릭터인 경우에
+	//if (IsLocallyControlled())
+	//{
+	//	GetController<ABullettimePlayerController>()->PlayerHUD->SetHealth(CurHealth, MaxHealth);
+
+	//	/*ABullettimePlayerController* BPC = GetController<ABullettimePlayerController>();
+	//	PlayerHUD = CreateWidget<UBullettimePlayerHUD>(BPC, PlayerHUDClass);
+	//	PlayerHUD->AddToPlayerScreen();
+	//	PlayerHUD->SetHealth(CurHealth, MaxHealth);*/
+	//}
+
+	SpawnTransform = GetActorTransform();
 }
 
 void ABullettimeCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-
-	if (PlayerHUD)
-	{
-		PlayerHUD->RemoveFromParent();
-		PlayerHUD = nullptr;
-	}
 
 	Super::EndPlay(EndPlayReason); 
 }
@@ -213,6 +236,8 @@ void ABullettimeCharacter::MoveRight(float Value)
 
 float ABullettimeCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
+	Super::TakeDamage(DamageTaken, DamageEvent, EventInstigator, DamageCauser);
+	RecentDamageCauser = EventInstigator;
 	float damageApplied = CurHealth - DamageTaken;
 	SetCurrentHealth(damageApplied);
 	return damageApplied;
@@ -223,44 +248,72 @@ void ABullettimeCharacter::OnRep_CurrentHealth()
 	OnHealthUpdate();
 }
 
+
 void ABullettimeCharacter::OnHealthUpdate() {
-	//Client-specific functionality
-	if (IsLocallyControlled())
+	
+	//데미지를 입은 캐릭터가 클라이언트의 플레이어 컨트롤러가 가지는 캐릭터인 경우 
+	// 혹은 리슨서버의 플레이어 컨트롤러가 가지는 캐릭터인 경우
+	if (IsLocallyControlled() || (GetLocalRole() == ROLE_Authority && GetRemoteRole() == ROLE_SimulatedProxy))
 	{
+		
 		FString healthMessage = FString::Printf(TEXT("You now have %f health remaining."), CurHealth);
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
+
+		GetController<ABullettimePlayerController>()->PlayerHUD->SetHealth(CurHealth, MaxHealth);
 
 		if (CurHealth <= 0)
 		{
 			FString deathMessage = FString::Printf(TEXT("You have been killed."));
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, deathMessage);
+
+			FTimerHandle WaitHandle;
+			float WaitTime = 4.0f;
+			GetWorld()->GetTimerManager().SetTimer(WaitHandle, FTimerDelegate::CreateLambda([&]()
+				{
+					// 로컬 플레이어컨트롤러의 HealthBar를 4초 후에 초기화한다.
+					GetController<ABullettimePlayerController>()->PlayerHUD->SetHealth(MaxHealth, MaxHealth);
+
+				}), WaitTime, false); 
+			
+			
+
+			// 카메라가 죽은 캐릭터를 천천히 비추는 연출
+			CameraWork();
+
+			
 		}
 
-		if (PlayerHUD)
-		{
-			PlayerHUD->SetHealth(CurHealth, MaxHealth);
-		}
 	}
 
-	//Server-specific functionality
+	//데미지를 입은 캐릭터가 서버
 	if (GetLocalRole() == ROLE_Authority)
 	{
 		FString healthMessage = FString::Printf(TEXT("%s now has %f health remaining."), *GetFName().ToString(), CurHealth);
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
 
+		//GetController<ABullettimePlayerController>()->PlayerHUD->SetHealth(CurHealth, MaxHealth);
+
 		if (CurHealth <= 0.f)
 		{
 			// 플레이어 죽음 처리
+
+			// 서버만 
+			// 
+			// 점수 누적
+			AddScore();
+			// 리스폰 타이머 세팅
+			SetRespawnTimer();
+
+			// 서버 - 클라이언트 모두
+			Multi_OnPlayerDie();
+
+			
 		}
 	}
 
-
-
-	//Functions that occur on all machines. 
-	/*
-		Any special functionality that should occur as a result of damage or death should be placed here.
-	*/
 }
+
+
 
 void ABullettimeCharacter::SetCurrentHealth(float healthValue)
 {
@@ -268,6 +321,7 @@ void ABullettimeCharacter::SetCurrentHealth(float healthValue)
 	{
 		CurHealth = FMath::Clamp(healthValue, 0.f, MaxHealth);
 		OnHealthUpdate();
+
 	}
 }
 
@@ -277,4 +331,106 @@ void ABullettimeCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 
 	//현재 체력 리플리케이트
 	DOREPLIFETIME(ABullettimeCharacter, CurHealth);
+}
+
+
+void ABullettimeCharacter::Multi_OnPlayerDie_Implementation()
+{
+	// 플레이어 메시를 물리 시뮬레이션 시키기
+	DoRagdoll();
+
+	// 1인칭 메시를 보이지 않게 하고 3인칭 메시는 보이도록 만들기
+	ChangeThirdPerson();
+
+}
+
+
+void ABullettimeCharacter::DoRagdoll()
+{
+
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::Type::PhysicsOnly);
+	GetMesh()->SetCollisionObjectType(ECollisionChannel::ECC_PhysicsBody);
+
+	// GetMesh()->SetCollisionProfileName("Ragdoll");
+
+	GetMesh()->SetSimulatePhysics(true);
+
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
+	GetCharacterMovement()->DisableMovement();
+
+}
+
+
+void ABullettimeCharacter::AddScore()
+{
+	ABullettimePlayerState* ThisPlayerState = GetController()->GetPlayerState<ABullettimePlayerState>();
+	ThisPlayerState->AddPlayerDeath();
+
+	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, FString::Printf(TEXT("DeathAddScore %d"), ThisPlayerState->PlayerId));
+
+
+	ABullettimePlayerController* OtherController = Cast<ABullettimePlayerController>(RecentDamageCauser);
+	if (OtherController)
+	{
+		ABullettimePlayerState* OtherPlayerState = OtherController->GetPlayerState<ABullettimePlayerState>();
+		if (OtherPlayerState)
+		{
+			OtherPlayerState->AddPlayerKill();
+			GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, FString::Printf(TEXT("killAddScore %d"), OtherPlayerState->PlayerId));
+		}
+	}
+
+}
+
+void ABullettimeCharacter::SetRespawnTimer()
+{
+	GetWorldTimerManager().SetTimer(RespawnTimerHandle, this, &ABullettimeCharacter::Client_RespawnCharacter, 5.0f, false);
+	FTimerHandle WaitHandle;
+	float WaitTime = 6.0f;
+	GetWorld()->GetTimerManager().SetTimer(WaitHandle, FTimerDelegate::CreateLambda([&]()
+		{
+			Destroy();
+
+		}), WaitTime, false);
+
+}
+
+void ABullettimeCharacter::CameraWork()
+{
+	//bUseControllerRotationYaw = false;
+	//CameraComponent->bUsePawnControlRotation = false;
+	//CameraComponent->bUseAttachParentBound = false;
+
+	RotationTimelineComp->Play();
+	TransformTimelineComp->Play();
+}
+
+void ABullettimeCharacter::ChangeThirdPerson()
+{
+	// 1인칭 팔 메시와 1인칭 총 메시를 안보이게 함
+	Mesh1P->SetVisibility(false, true);
+
+	GetMesh()->SetOwnerNoSee(false);
+
+}
+
+void ABullettimeCharacter::Client_RespawnCharacter_Implementation()
+{
+	GetController<ABullettimePlayerController>()->Server_RespawnPawn(SpawnTransform);
+	
+}
+
+void ABullettimeCharacter::UpdateRotationTimelineComp(FVector Output)
+{
+	//FRotator CameraNewRotation = FRotator();
+	// rotator
+	CameraComponent->SetRelativeRotation(FRotator(Output.Y, 0.f, 0.f));
+
+}
+
+void ABullettimeCharacter::UpdateTransformTimelineComp(FVector Output)
+{
+	FTransform CameraNewPosition = FTransform(Output);
+	CameraComponent->SetRelativeTransform(CameraNewPosition);
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, FString::Printf(TEXT("%s"), *(Output.ToString())));
 }
