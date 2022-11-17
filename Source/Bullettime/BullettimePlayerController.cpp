@@ -63,12 +63,12 @@ void ABullettimePlayerController::BeginPlay()
 	{
 		PlayerHUD = CreateWidget<UBullettimePlayerHUD>(this, PlayerHUDClass);
 		PlayerHUD->AddToPlayerScreen();
-		//Cast<ABullettimeCharacter>(GetPawn())->GetCurrentHealth();
 		PlayerHUD->SetHealth(100.0f, 100.0f);
 	}
 }
 
 void ABullettimePlayerController::Server_RespawnPawn_Implementation(FTransform SpawnTransform)
 {
+	
 	Cast<ABullettimeGameMode>(UGameplayStatics::GetGameMode(GetWorld()))->Server_RespawnRequested(this, SpawnTransform);
 }

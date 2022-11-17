@@ -12,14 +12,14 @@
 
 ABullettimeGameMode::ABullettimeGameMode()
 {
-	PRINT_LOG(TEXT("My Log : %s"), TEXT("Bullettime project!!"));
+	//PRINT_LOG(TEXT("My Log : %s"), TEXT("Bullettime project!!"));
 
-	// set default pawn class to our Blueprinted character
-	static ConstructorHelpers::FClassFinder<APawn> PlayerPawnBPClass(TEXT("/Game/Blueprint/BP_ThirdPersonCharacter"));
-	if (PlayerPawnBPClass.Class != NULL)
-	{
-		DefaultPawnClass = PlayerPawnBPClass.Class;
-	}
+	//// set default pawn class to our Blueprinted character
+	//static ConstructorHelpers::FClassFinder<APawn> PlayerPawnBPClass(TEXT("/Game/Blueprint/BP_ThirdPersonCharacter"));
+	//if (PlayerPawnBPClass.Class != NULL)
+	//{
+	//	DefaultPawnClass = PlayerPawnBPClass.Class;
+	//}
 
 	//Controller
 }
@@ -33,8 +33,7 @@ void ABullettimeGameMode::Server_RespawnRequested_Implementation(ABullettimePlay
 		FActorSpawnParameters ActorSpawnParams;
 	
 		ABullettimeCharacter* Character = GetWorld()->SpawnActor<ABullettimeCharacter>(BullettimeCharacterClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
-		//GetWorld()->Spaw
-		// FPlatformProcess::Sleep(0.2f);
+
 		PlayerController->Possess(Character);
 	
 	}

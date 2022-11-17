@@ -29,7 +29,7 @@ ABullettimeCharacter::ABullettimeCharacter()
 	//GetCapsuleComponent()->SetCollisionProfileName(TEXT("BlockAllDynamic"));
 	GetCapsuleComponent()->SetCollisionObjectType(ECC_GameTraceChannel2);
 	// GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Ignore);
-	//GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Overlap);
+	// GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Overlap);
 	
 
 	// set our turn rate for input
@@ -109,8 +109,6 @@ void ABullettimeCharacter::BeginPlay()
 
 	CurHealth = MaxHealth;
 	
-
-
 	UpdateFunctionRotation.BindDynamic(this, &ABullettimeCharacter::UpdateRotationTimelineComp);
 	UpdateFunctionTransform.BindDynamic(this, &ABullettimeCharacter::UpdateTransformTimelineComp);
 
@@ -125,19 +123,6 @@ void ABullettimeCharacter::BeginPlay()
 		RotationTimelineComp->AddInterpVector(CameraTimelineRotationCurve, UpdateFunctionRotation);
 	}
 
-	
-
-
-	// 클라이언트 혹은 리슨서버가 소유한 캐릭터인 경우에
-	//if (IsLocallyControlled())
-	//{
-	//	GetController<ABullettimePlayerController>()->PlayerHUD->SetHealth(CurHealth, MaxHealth);
-
-	//	/*ABullettimePlayerController* BPC = GetController<ABullettimePlayerController>();
-	//	PlayerHUD = CreateWidget<UBullettimePlayerHUD>(BPC, PlayerHUDClass);
-	//	PlayerHUD->AddToPlayerScreen();
-	//	PlayerHUD->SetHealth(CurHealth, MaxHealth);*/
-	//}
 
 	SpawnTransform = GetActorTransform();
 }
@@ -280,6 +265,9 @@ void ABullettimeCharacter::OnHealthUpdate() {
 			// 카메라가 죽은 캐릭터를 천천히 비추는 연출
 			CameraWork();
 
+			// 1인칭 메시를 보이지 않게 하고 3인칭 메시는 보이도록 만들기
+			ChangeThirdPerson();
+
 			
 		}
 
@@ -338,9 +326,6 @@ void ABullettimeCharacter::Multi_OnPlayerDie_Implementation()
 {
 	// 플레이어 메시를 물리 시뮬레이션 시키기
 	DoRagdoll();
-
-	// 1인칭 메시를 보이지 않게 하고 3인칭 메시는 보이도록 만들기
-	ChangeThirdPerson();
 
 }
 
