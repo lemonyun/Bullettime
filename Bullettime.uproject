@@ -24,10 +24,6 @@
 		{
 			"Name": "Takes",
 			"Enabled": true
-		},
-		{
-			"Name": "OnlineSubsystemSteam",
-			"Enabled": true
 		}
 	]
 }

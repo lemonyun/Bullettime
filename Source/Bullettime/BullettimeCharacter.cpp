@@ -25,7 +25,7 @@ ABullettimeCharacter::ABullettimeCharacter()
 
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
-
+	RootComponent = GetCapsuleComponent();
 	//GetCapsuleComponent()->SetCollisionProfileName(TEXT("BlockAllDynamic"));
 	GetCapsuleComponent()->SetCollisionObjectType(ECC_GameTraceChannel2);
 	// GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Ignore);
@@ -82,11 +82,13 @@ ABullettimeCharacter::ABullettimeCharacter()
 	//Weapon->SetupAttachment(WeaponMesh1P);
 
 	FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
-	WeaponMesh1P->AttachToComponent(Mesh1P, AttachmentRules, FName(TEXT("GripPoint")));
+	//WeaponMesh1P->AttachToComponent(Mesh1P, AttachmentRules, FName(TEXT("GripPoint")));
+	WeaponMesh1P->SetupAttachment(Mesh1P, FName(TEXT("GripPoint")));
 
 	WeaponMesh3P = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("CharacterMesh3P"));
 	WeaponMesh3P->SetOwnerNoSee(true);
-	WeaponMesh3P->AttachToComponent(GetMesh(), AttachmentRules, FName(TEXT("GripPoint")));
+	//WeaponMesh3P->AttachToComponent(GetMesh(), AttachmentRules, FName(TEXT("GripPoint")));
+	WeaponMesh3P->SetupAttachment(GetMesh(), FName(TEXT("GripPoint")));
 	
 	MaxHealth = 100;
 	CurHealth = MaxHealth;

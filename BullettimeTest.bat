@@ -1,0 +1,1 @@
+E:\UE_5.0\Engine\Binaries\Win64\UnrealEditor.exe E:\Unreal5Project\Bullettime\Bullettime.uproject -game -ResX=800 -ResY=900 -WinX=0 -WinY=20 -log
