@@ -9,7 +9,7 @@
 
 UOnlineGameInstance::UOnlineGameInstance()
 {
-	
+	MySessionName = FName("My Session");
 }
 
 void UOnlineGameInstance::Init()
@@ -29,7 +29,7 @@ void UOnlineGameInstance::Init()
 	}
 }
 
-void UOnlineGameInstance::OnCreateSessionComplete(FName ServerName, bool Succeeded)
+void UOnlineGameInstance::OnCreateSessionComplete(FName SessionName, bool Succeeded)
 {
 	UE_LOG(LogTemp, Warning, TEXT("OnCreateSessionComplete, Succeeded: %d"), Succeeded);
 
@@ -42,34 +42,43 @@ void UOnlineGameInstance::OnCreateSessionComplete(FName ServerName, bool Succeed
 
 void UOnlineGameInstance::OnFindSessionComplete(bool Succeeded)
 {
+	SearchingForServer.Broadcast(false);
+
 	UE_LOG(LogTemp, Warning, TEXT("OnFind SessionComplete, Succeeded: %d"), Succeeded);
 	if (Succeeded)
 	{
 		TArray<FOnlineSessionSearchResult> SearchResults = SessionSearch->SearchResults;
 
+		int32 ArrayIndex = 0;
+
+
 		for (FOnlineSessionSearchResult Result : SearchResults)
 		{
+			
 			if(!Result.IsValid())
 				continue;
 
 			FServerInfo Info;
-			Info.ServerName = "Test Server Name";
+			FString ServerName = "Empty Server Name";
+			
+			Result.Session.SessionSettings.Get(FName("SERVER_NAME_KEY"), ServerName);
+			
+			Info.ServerName = ServerName;
 			Info.MaxPlayers = Result.Session.SessionSettings.NumPublicConnections;
 			Info.CurrentPlayers = Info.MaxPlayers - Result.Session.NumOpenPublicConnections;
+			Info.ServerArrayIndex = ArrayIndex;
+			Info.SetPlayerCount();
+
+			Info.IsLan = Result.Session.SessionSettings.bIsLANMatch;
+			Info.Ping = Result.PingInMs;
+
 
 			// 블루프린트에서 바인딩한 함수가 실행됨(위젯 생성)
 			ServerListDel.Broadcast(Info);
+
+			++ArrayIndex;
 		}
 		UE_LOG(LogTemp, Warning, TEXT("SearchResults, Server Count: %d"), SearchResults.Num());
-
-		//if (SearchResults.Num())
-		//{
-
-		//	UE_LOG(LogTemp, Warning, TEXT("Joining Server"));
-		//	// 로컬userid 세션이름 FOnlineSearchResult
-
-		//	SessionInterface->JoinSession(0, "My Session", SearchResults[0]);
-		//}
 
 	}
 }
@@ -88,7 +97,7 @@ void UOnlineGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessio
 }
 
 // MainMenu_UI의 HostButton Onclick 이벤트로 호출됨
-void UOnlineGameInstance::CreateServer()
+void UOnlineGameInstance::CreateServer(FCreateServerInfo ServerInfo)
 {
 	UE_LOG(LogTemp, Warning, TEXT("CreateServer"));
 
@@ -102,18 +111,22 @@ void UOnlineGameInstance::CreateServer()
 	SessionSettings.bShouldAdvertise = true;
 	SessionSettings.bUsesPresence = true;
 	SessionSettings.bUseLobbiesIfAvailable = true;
-	SessionSettings.NumPublicConnections = 5;
+	SessionSettings.NumPublicConnections = ServerInfo.MaxPlayers;
+
+	SessionSettings.Set(FName("SERVER_NAME_KEY"), ServerInfo.ServerName, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+	//SessionSettings.Set
 
 	// hosting player id, 세션 이름, 세션 세팅 파라미터 구조체
-	SessionInterface->CreateSession(0, FName("My Session"), SessionSettings);
+	SessionInterface->CreateSession(0, MySessionName, SessionSettings);
 }
 
 void UOnlineGameInstance::SearchServer()
 {
+	SearchingForServer.Broadcast(true); 
 	
 	UE_LOG(LogTemp, Warning, TEXT("JoinServer"));
 
-	SessionSearch = MakeShareable(new FOnlineSessionSearch());
+	SessionSearch = MakeShareable(new FOnlineSessionSearch()) ;
 	if (IOnlineSubsystem::Get()->GetSubsystemName() != "NULL")
 		SessionSearch->bIsLanQuery = false; // LAN에서 찾는지?
 	else
@@ -122,6 +135,21 @@ void UOnlineGameInstance::SearchServer()
 	SessionSearch->QuerySettings.Set(SEARCH_PRESENCE, true, EOnlineComparisonOp::Equals); // 세션 검색에 사용할 쿼리
 
 	SessionInterface->FindSessions(0, SessionSearch.ToSharedRef());
+}
+
+void UOnlineGameInstance::JoinServer(int32 ArrayIndex)
+{
+	FOnlineSessionSearchResult Result = SessionSearch->SearchResults[ArrayIndex];
+	if (Result.IsValid())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("JOINING SESSION AT INDEX: %d"), ArrayIndex);
+		SessionInterface->JoinSession(0, MySessionName, Result);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("FAILED TO JOIN SERVER AT INDEX: %d"), ArrayIndex);
+	}
+
 }
 
 void UOnlineGameInstance::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
